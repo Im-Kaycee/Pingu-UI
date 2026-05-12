@@ -1,3 +1,11 @@
+declare global {
+  interface Window {
+    electron: {
+      resizeWindow: (height: number) => void
+    }
+  }
+}
+
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -24,6 +32,7 @@ export default function App() {
   const [aiStatus, setAiStatus] = useState<'gemini' | 'ollama' | 'offline'>('gemini')
   const inputRef = useRef<HTMLInputElement>(null)
   const errorRef = useRef<HTMLTextAreaElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -33,6 +42,12 @@ export default function App() {
   useEffect(() => {
     if (errorMode) errorRef.current?.focus()
   }, [errorMode])
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const height = containerRef.current.scrollHeight + 64
+    window.electron.resizeWindow(height)
+  }, [result, errorMode])
 
   const checkAiStatus = async () => {
     try {
@@ -91,17 +106,21 @@ export default function App() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const statusColor = {
-    gemini: '#34c759',
-    ollama: '#a78bfa',
-    offline: '#ff3b30',
-  }[aiStatus]
+const statusLabel = {
+  gemini: 'gemini connected',
+  ollama: 'ollama local',
+  offline: 'offline',
+  cache: 'instant · cached',
+  recipe: 'verified recipe',
+}[aiStatus] ?? 'gemini connected'
 
-  const statusLabel = {
-    gemini: 'gemini connected',
-    ollama: 'ollama local',
-    offline: 'offline',
-  }[aiStatus]
+const statusColor = {
+  gemini: '#34c759',
+  ollama: '#a78bfa',
+  offline: '#ff3b30',
+  cache: '#38bdf8',
+  recipe: '#34c759',
+}[aiStatus] ?? '#34c759'
 
   const sourceLabel = {
     official: '✓ Official source',
@@ -132,12 +151,13 @@ export default function App() {
   }[result?.source ?? 'ai'] ?? 'rgba(167,139,250,0.25)'
 
   return (
-    <div style={{
+    <div ref={containerRef} style={{
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'center',
       minHeight: '100vh',
-      padding: '32px 20px',
+      padding: '0px 20px',
+      paddingTop: '0px',
       background: 'transparent',
     }}>
       <motion.div
