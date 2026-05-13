@@ -36,7 +36,7 @@ export default function App() {
 
   useEffect(() => {
     inputRef.current?.focus()
-    checkAiStatus()
+    setTimeout(() => checkAiStatus(), 3000)
   }, [])
 
   useEffect(() => {
@@ -49,13 +49,19 @@ export default function App() {
     window.electron.resizeWindow(height)
   }, [result, errorMode])
 
-  const checkAiStatus = async () => {
+  const checkAiStatus = async (retries = 5) => {
     try {
       const res = await fetch('http://127.0.0.1:8765/status')
       const data = await res.json()
+      console.log('status response:', data)
       setAiStatus(data.provider)
-    } catch {
-      setAiStatus('offline')
+    } catch (e) {
+      if (retries > 0) {
+        setTimeout(() => checkAiStatus(retries - 1), 2000)
+      } else {
+        console.log('status error:', e)
+        setAiStatus('offline')
+      }
     }
   }
 

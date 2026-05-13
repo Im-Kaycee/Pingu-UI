@@ -9,26 +9,29 @@ let tray: Tray | null = null;
 let backendProcess: ChildProcess | null = null;
 
 function startBackend() {
-  const backendRoot = path.join(path.dirname(app.getAppPath()), '../linux-copilot-backend');
-  const pythonPath = '/home/kelechukwu/Documents/Projects/linux-copilot-backend/backend/bin/python3'
-const scriptPath = '/home/kelechukwu/Documents/Projects/linux-copilot-backend/backend/App/main.py'
+  const pythonPath = process.env.PINGU_PYTHON || 
+    '/home/kelechukwu/Documents/Projects/linux-copilot-backend/backend/bin/python3'
+  const scriptPath = process.env.PINGU_SCRIPT || 
+    '/home/kelechukwu/Documents/Projects/linux-copilot-backend/backend/App/main.py'
+  const cwd = process.env.PINGU_CWD || 
+    '/home/kelechukwu/Documents/Projects/linux-copilot-backend/backend/App'
 
-backendProcess = spawn(pythonPath, [scriptPath], {
-  cwd: '/home/kelechukwu/Documents/Projects/linux-copilot-backend/backend/App',
-  stdio: 'pipe',
-})
+  backendProcess = spawn(pythonPath, [scriptPath], {
+    cwd,
+    stdio: 'pipe',
+  })
 
   backendProcess.stdout?.on('data', (data) => {
-    console.log(`Backend: ${data}`);
-  });
+    console.log(`Backend: ${data}`)
+  })
 
   backendProcess.stderr?.on('data', (data) => {
-    console.error(`Backend error: ${data}`);
-  });
+    console.error(`Backend error: ${data}`)
+  })
 
   backendProcess.on('exit', (code) => {
-    console.log(`Backend exited with code ${code}`);
-  });
+    console.log(`Backend exited with code ${code}`)
+  })
 }
 
 function createWindow() {
@@ -68,18 +71,20 @@ function createWindow() {
 
 app.whenReady().then(() => {
   startBackend();
+  createWindow();
 
-  // Small delay to let backend start before UI loads
   setTimeout(() => {
-    createWindow();
+    const iconPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'icon.png')
+  : path.join(__dirname, '../../src/icon.png')
 
-    const icon = nativeImage.createFromPath(path.join(__dirname, '../../src/icon.png'))
+    const icon = nativeImage.createFromPath(iconPath)
     const trayIcon = icon.resize({ width: 16, height: 16 })
     tray = new Tray(trayIcon)
 
     const contextMenu = Menu.buildFromTemplate([
       {
-        label: 'Show Linux Copilot',
+        label: 'Show Pingu',
         click: () => {
           mainWindow?.center()
           mainWindow?.show()
@@ -91,7 +96,7 @@ app.whenReady().then(() => {
       },
     ])
 
-    tray.setToolTip('Linux Copilot')
+    tray.setToolTip('Pingu')
     tray.setContextMenu(contextMenu)
 
     tray.on('click', () => {
@@ -103,7 +108,6 @@ app.whenReady().then(() => {
       }
     })
 
-    // Poll the backend for toggle signal
     setInterval(async () => {
       try {
         const { net } = require('electron')
@@ -125,7 +129,7 @@ app.whenReady().then(() => {
         })
         request.end()
       } catch {}
-    }, 500)
+    }, 100)
   }, 2000)
 });
 app.on('will-quit', () => {
